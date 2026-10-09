@@ -1,229 +1,43 @@
-
 <!DOCTYPE html>
-<html lang="mr">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>RAMESHSHET Smart Billing</title>
+<html lang="mr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RAMESHSHET Smart Billing V3</title>
 <style>
-*{box-sizing:border-box}
-body{font-family:Arial,sans-serif;background:#f1f5f9;margin:0;padding:14px;color:#172b22}
-h1{text-align:center;color:#14532d;font-size:26px}
-h2{font-size:20px}
-.card{background:white;padding:16px;margin:15px 0;border-radius:14px}
-input,select,button{width:100%;padding:13px;margin:6px 0;font-size:16px;border-radius:8px;border:1px solid #bbb}
-button{background:#15803d;color:white;border:0;font-weight:bold}
-.secondary{background:#334155}
-.danger{background:#b91c1c}
-.item{padding:9px 0;border-bottom:1px solid #ddd}
-.total{font-size:26px;font-weight:bold;margin:16px 0}
-small{color:#64748b}
-.row{display:flex;gap:8px}
-.row>*{flex:1;min-width:0}
-#receipt{display:none}
-@media print{
-body>*:not(#receipt){display:none!important}
-#receipt{display:block!important}
-}
-</style>
-</head>
-<body>
-<h1>RAMESHSHET<br>Smart Billing</h1>
-
-<div class="card">
-<h2>नवीन बिल / New Bill</h2>
-<select id="billType">
-<option value="simple">साधं बिल</option>
-<option value="gst">GST बिल</option>
-</select>
-<input id="customer" placeholder="ग्राहकाचे नाव">
-<input id="product" placeholder="वस्तूचे नाव / Product">
-<div class="row">
-<input id="qty" type="number" min="0.001" step="any" placeholder="प्रमाण">
-<select id="unit">
-<option>kg</option><option>g</option>
-<option>pcs</option><option>packet</option>
-<option>liter</option><option>ml</option>
-<option>bag</option><option>box</option>
-</select>
-</div>
-<input id="rate" type="number" min="0" step="any" placeholder="दर ₹ (प्रति निवडलेले युनिट)">
-<input id="gstRate" type="number" min="0" max="100" step="any" placeholder="GST % (उदा. 5)">
-<small>GST बिलासाठी योग्य GST दर स्वतः भरा. दर GST वगळून आहे.</small>
-<button onclick="addItem()">+ Add Item</button>
-</div>
-
-<div class="card">
-<h2>बिल / Bill</h2>
-<div id="items"></div>
-<div class="total" id="total">Total: ₹0.00</div>
-<button onclick="saveBill()">Save Bill</button>
-<button onclick="printCurrent()">Print Bill</button>
-<button class="secondary" onclick="newBill()">New Bill</button>
-</div>
-
-<div class="card">
-<h2>Bill History</h2>
-<input id="search" placeholder="बिल नंबर किंवा ग्राहक शोधा" oninput="showHistory()">
-<div id="history"></div>
-</div>
-
+*{box-sizing:border-box}body{font-family:Arial,sans-serif;background:#f1f5f9;margin:0;padding:12px;color:#172b22}h1{text-align:center;color:#14532d;font-size:25px}h2{font-size:19px}.card{background:white;padding:15px;margin:13px 0;border-radius:13px}input,select,button{width:100%;padding:12px;margin:5px 0;font-size:16px;border-radius:8px;border:1px solid #bbb}button{background:#15803d;color:#fff;border:0;font-weight:bold}.secondary{background:#334155}.danger{background:#b91c1c}.item{padding:10px 0;border-bottom:1px solid #ddd}.total{font-size:25px;font-weight:bold;margin:14px 0}small{color:#64748b}.row{display:flex;gap:8px}.row>*{flex:1;min-width:0}.warning{color:#9a3412;font-weight:bold}.pill{display:inline-block;background:#dcfce7;padding:4px 8px;border-radius:6px}#receipt{display:none}nav{display:flex;gap:5px}nav button{font-size:14px;padding:9px}.hide{display:none}@media print{body>*:not(#receipt){display:none!important}#receipt{display:block!important;color:#000;background:#fff;font-family:Arial,sans-serif;padding:0;font-size:12px}#receipt h2{font-size:18px}#receipt table{width:100%;border-collapse:collapse}#receipt td,#receipt th{border-bottom:1px solid #aaa;text-align:left;padding:5px}}
+</style></head><body>
+<h1>RAMESHSHET<br>Smart Billing <small>V3</small></h1>
+<nav><button onclick="tab('billing')">Billing</button><button onclick="tab('stock')">Stock</button><button onclick="tab('records')">History</button></nav>
+<section id="billing">
+<div class="card"><h2>नवीन बिल / New Bill</h2><select id="billType"><option value="simple">साधं बिल</option><option value="gst">GST (अधिकृत बिल अजून उपलब्ध नाही)</option></select><input id="customer" placeholder="ग्राहकाचे नाव"><select id="productSelect" onchange="pickProduct()"><option value="">स्टॉकमधून वस्तू निवडा (ऐच्छिक)</option></select><input id="product" placeholder="वस्तूचे नाव / Product"><div class="row"><input id="qty" type="number" min="0.001" step="any" placeholder="प्रमाण"><select id="unit"><option>kg</option><option>g</option><option>pcs</option><option>packet</option><option>liter</option><option>ml</option><option>bag</option><option>box</option></select></div><input id="rate" type="number" min="0" step="any" placeholder="विक्री दर ₹ (निवडलेल्या युनिटप्रमाणे)"><small>स्टॉकमधील वस्तू निवडल्यास तिच्या मूळ युनिटमध्येच बिल करा. उदा. kg स्टॉकसाठी kg प्रमाण.</small><button onclick="addItem()">+ Add Item</button></div>
+<div class="card"><h2>बिल / Bill</h2><div id="items"></div><div class="total" id="total">Total: ₹0.00</div><button onclick="saveBill()">Save Bill</button><button onclick="printCurrent()">Print / Save PDF</button><button class="secondary" onclick="newBill()">New Bill</button></div>
+</section>
+<section id="stock" class="hide"><div class="card"><h2>Stock Management</h2><input id="stockName" placeholder="वस्तूचे नाव"><div class="row"><select id="stockUnit"><option>kg</option><option>g</option><option>pcs</option><option>packet</option><option>liter</option><option>ml</option><option>bag</option><option>box</option></select><input id="stockQty" type="number" min="0" step="any" placeholder="उपलब्ध प्रमाण"></div><div class="row"><input id="buyRate" type="number" min="0" step="any" placeholder="खरेदी दर ₹"><input id="sellRate" type="number" min="0" step="any" placeholder="विक्री दर ₹"></div><input id="minQty" type="number" min="0" step="any" placeholder="कमी स्टॉकची मर्यादा (उदा. 5)"><button onclick="saveProduct()">Add / Update Product</button><small>एकाच नावाची आणि युनिटची वस्तू पुन्हा भरल्यास उपलब्ध प्रमाण नवीन दिलेल्या प्रमाणाने बदलते; जुना स्टॉक त्यात जोडला जात नाही.</small><input id="stockSearch" placeholder="स्टॉक शोधा" oninput="renderStock()"><div id="stockList"></div></div></section>
+<section id="records" class="hide"><div class="card"><h2>Bill History</h2><input id="search" placeholder="बिल नंबर किंवा ग्राहक शोधा" oninput="showHistory()"><div id="history"></div></div><div class="card"><h2>Backup</h2><button class="secondary" onclick="exportBackup()">Download Backup (JSON)</button><small>मोबाईल हरवला, Chrome डेटा साफ झाला किंवा दुसरा मोबाईल वापरायचा असल्यास हा Backup महत्त्वाचा आहे. या आवृत्तीत मोबाईलमध्ये आपोआप Sync होत नाही.</small></div></section>
 <div id="receipt"></div>
-
 <script>
-const KEY="rameshshet_bills_v2";
-let items=[];
-let bills=[];
-let selectedBill=null;
-
-try{
-const saved=JSON.parse(localStorage.getItem(KEY)||"[]");
-if(Array.isArray(saved)) bills=saved;
-}catch(e){alert("जुना डेटा वाचता आला नाही");}
-
-const el=id=>document.getElementById(id);
-const money=n=>"₹"+Number(n).toFixed(2);
-const round=n=>Math.round((n+Number.EPSILON)*100)/100;
-const esc=s=>String(s).replace(/[&<>"']/g,c=>({
-"&":"&amp;","<":"&lt;",">":"&gt;",
-'"':"&quot;","'":"&#39;"
-}[c]));
-
-function addItem(){
-const name=el("product").value.trim();
-const qty=Number(el("qty").value);
-const rate=Number(el("rate").value);
-const gst=el("billType").value==="gst"?
-Number(el("gstRate").value||0):0;
-if(!name||!Number.isFinite(qty)||qty<=0||
-!Number.isFinite(rate)||rate<0||
-!Number.isFinite(gst)||gst<0||gst>100){
-alert("वस्तू, प्रमाण, दर आणि GST तपासा");
-return;
-}
-items.push({name,qty,rate,gst,unit:el("unit").value});
-el("product").value="";
-el("qty").value="";
-el("rate").value="";
-el("gstRate").value="";
-render();
-}
-
-function calc(list){
-let base=0,tax=0;
-list.forEach(i=>{
-const amount=round(i.qty*i.rate);
-base+=amount;
-tax+=round(amount*i.gst/100);
-});
-base=round(base);tax=round(tax);
-return {base,tax,total:round(base+tax)};
-}
-
-function render(){
-el("items").innerHTML=items.map((i,n)=>
-`<div class="item">${esc(i.name)} —
-${i.qty} ${esc(i.unit)} × ${money(i.rate)}
-${i.gst?`(GST ${i.gst}%)`:""}
-<button class="danger" onclick="removeItem(${n})">Remove</button>
-</div>`).join("");
-const c=calc(items);
-el("total").textContent="Total: "+money(c.total);
-}
-
-function removeItem(n){
-items.splice(n,1);render();
-}
-
-function saveBill(){
-if(!items.length){alert("आधी वस्तू जोडा");return;}
-const type=el("billType").value;
-if(type==="gst"){
-alert("GST बिलाचा हा प्राथमिक नमुना आहे. अधिकृत GST बिलासाठी GSTIN, HSN आणि कर विभागणी आवश्यक आहे.");
-return;
-}
-const bill={
-id:"B"+Date.now(),
-date:new Date().toLocaleString("en-IN"),
-customer:el("customer").value.trim()||"Walk-in",
-type,
-items:items.map(i=>({...i})),
-...calc(items)
-};
-const updated=[bill,...bills];
-try{
-localStorage.setItem(KEY,JSON.stringify(updated));
-bills=updated;
-selectedBill=bill;
-alert("Bill Saved: "+bill.id);
-showHistory();
-}catch(e){
-alert("बिल सेव्ह झाले नाही. Storage तपासा.");
-}
-}
-
-function newBill(){
-items=[];selectedBill=null;
-el("customer").value="";
-el("billType").value="simple";
-render();
-}
-
-function showHistory(){
-const q=el("search").value.toLowerCase();
-el("history").innerHTML=bills.filter(b=>
-b.id.toLowerCase().includes(q)||
-b.customer.toLowerCase().includes(q)
-).map(b=>`<div class="item">
-<b>${esc(b.id)}</b><br>
-${esc(b.customer)} — ${money(b.total)}<br>
-<small>${esc(b.date)}</small>
-<button onclick="printSaved('${b.id}')">Print / View</button>
-</div>`).join("")||"अजून बिल नाही";
-}
-
-function receiptHTML(b){
-return `<h2>RAMESHSHET TRENDING COMPANY</h2>
-<p>DONGERGAON RODE, NEAR SHRI SANT SAWATA MAHARAJ TEMPLE, DUGAON 423104<br>
-Mob: 8796635551</p>
-<hr>
-<p>Bill: ${esc(b.id)}<br>
-Date: ${esc(b.date)}<br>
-Customer: ${esc(b.customer)}</p>
-<hr>
-${b.items.map(i=>`<p>${esc(i.name)}<br>
-${i.qty} ${esc(i.unit)} × ${money(i.rate)}
-= ${money(round(i.qty*i.rate))}</p>`).join("")}
-<hr>
-<p>Subtotal: ${money(b.base)}</p>
-<p>GST: ${money(b.tax)}</p>
-<h2>Total: ${money(b.total)}</h2>
-<p>Thank you! धन्यवाद!</p>`;
-}
-
-function printBill(b){
-el("receipt").innerHTML=receiptHTML(b);
-window.print();
-}
-
-function printSaved(id){
-const b=bills.find(x=>x.id===id);
-if(b)printBill(b);
-}
-
-function printCurrent(){
-if(!items.length){alert("आधी वस्तू जोडा");return;}
-const b=selectedBill&&
-JSON.stringify(selectedBill.items)===JSON.stringify(items)
-?selectedBill:{
-id:"UNSAVED",date:new Date().toLocaleString("en-IN"),
-customer:el("customer").value||"Walk-in",
-items:items.map(i=>({...i})),...calc(items)
-};
-printBill(b);
-}
-render();
-showHistory();
-</script>
-</body>
-</html>
+const BILL_KEY='rameshshet_bills_v2',STOCK_KEY='rameshshet_stock_v3';
+let items=[],bills=[],stock=[],selectedBill=null;
+const el=id=>document.getElementById(id),round=n=>Math.round((n+Number.EPSILON)*100)/100,money=n=>'₹'+Number(n).toFixed(2);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function load(key){try{let v=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(v)?v:[]}catch(e){alert('Saved data वाचता आला नाही: '+key);return []}}
+bills=load(BILL_KEY);stock=load(STOCK_KEY);
+function tab(t){['billing','stock','records'].forEach(id=>el(id).classList.toggle('hide',id!==t));if(t==='stock')renderStock();if(t==='records')showHistory()}
+function persist(key,value){try{localStorage.setItem(key,JSON.stringify(value));return true}catch(e){alert('Storage मध्ये सेव्ह झाले नाही. जागा/Browser settings तपासा.');return false}}
+function selectProducts(){let old=el('productSelect').value;el('productSelect').innerHTML='<option value="">स्टॉकमधून वस्तू निवडा (ऐच्छिक)</option>'+stock.map(p=>`<option value="${esc(p.id)}">${esc(p.name)} (${p.qty} ${esc(p.unit)})</option>`).join('');if(stock.some(p=>p.id===old))el('productSelect').value=old}
+function pickProduct(){let p=stock.find(x=>x.id===el('productSelect').value);if(!p)return;el('product').value=p.name;el('unit').value=p.unit;el('rate').value=p.sell}
+function saveProduct(){let name=el('stockName').value.trim(),unit=el('stockUnit').value,qty=Number(el('stockQty').value),buy=Number(el('buyRate').value),sell=Number(el('sellRate').value),min=Number(el('minQty').value||0);if(!name||!el('stockQty').value||!el('sellRate').value||![qty,buy,sell,min].every(x=>Number.isFinite(x)&&x>=0)){alert('वस्तूचे नाव, प्रमाण, खरेदी/विक्री दर तपासा');return}let existing=stock.find(p=>p.name.toLowerCase()===name.toLowerCase()&&p.unit===unit);let updated=stock.map(p=>({...p}));if(existing){let p=updated.find(x=>x.id===existing.id);Object.assign(p,{name,qty,buy,sell,min})}else updated.push({id:'P'+Date.now()+'_'+Math.random().toString(36).slice(2,7),name,unit,qty,buy,sell,min});if(!persist(STOCK_KEY,updated))return;stock=updated;['stockName','stockQty','buyRate','sellRate','minQty'].forEach(id=>el(id).value='');renderStock();selectProducts();alert('Stock Saved')}
+function renderStock(){let q=el('stockSearch').value.toLowerCase();el('stockList').innerHTML=stock.filter(p=>p.name.toLowerCase().includes(q)).map(p=>`<div class="item"><b>${esc(p.name)}</b> — ${p.qty} ${esc(p.unit)}<br><small>Buy ${money(p.buy)} | Sell ${money(p.sell)}</small>${p.qty<=p.min?'<div class="warning">⚠ कमी स्टॉक</div>':''}<div class="row"><button class="secondary" onclick="editProduct('${p.id}')">Edit</button><button class="danger" onclick="deleteProduct('${p.id}')">Delete</button></div></div>`).join('')||'वस्तू नाहीत'}
+function editProduct(id){let p=stock.find(x=>x.id===id);if(!p)return;el('stockName').value=p.name;el('stockUnit').value=p.unit;el('stockQty').value=p.qty;el('buyRate').value=p.buy;el('sellRate').value=p.sell;el('minQty').value=p.min;window.scrollTo(0,0)}
+function deleteProduct(id){if(!confirm('ही वस्तू स्टॉकमधून काढायची? जुनी बिलं राहतील.'))return;let updated=stock.filter(p=>p.id!==id);if(persist(STOCK_KEY,updated)){stock=updated;renderStock();selectProducts()}}
+function addItem(){let name=el('product').value.trim(),qty=Number(el('qty').value),rate=Number(el('rate').value),unit=el('unit').value,p=stock.find(x=>x.id===el('productSelect').value);if(!name||!el('qty').value||!el('rate').value||!Number.isFinite(qty)||qty<=0||!Number.isFinite(rate)||rate<0){alert('वस्तू, प्रमाण आणि दर तपासा');return}if(p&&(name!==p.name||unit!==p.unit)){alert('स्टॉक वस्तूचे नाव किंवा युनिट बदलले आहे. पुन्हा निवडा.');return}if(p){let already=items.filter(i=>i.productId===p.id).reduce((s,i)=>s+i.qty,0);if(round(already+qty)>p.qty){alert('पुरेसा स्टॉक नाही: '+p.qty+' '+p.unit);return}}items.push({name,qty,rate,unit,gst:0,productId:p?p.id:null});['product','qty','rate'].forEach(id=>el(id).value='');el('productSelect').value='';selectedBill=null;render()}
+function calc(list){let base=round(list.reduce((s,i)=>s+round(i.qty*i.rate),0));return{base,tax:0,total:base}}
+function render(){el('items').innerHTML=items.map((i,n)=>`<div class="item">${esc(i.name)} — ${i.qty} ${esc(i.unit)} × ${money(i.rate)}<button class="danger" onclick="removeItem(${n})">Remove</button></div>`).join('');el('total').textContent='Total: '+money(calc(items).total)}
+function removeItem(n){items.splice(n,1);selectedBill=null;render()}
+function saveBill(){if(!items.length){alert('आधी वस्तू जोडा');return}if(el('billType').value==='gst'){alert('अधिकृत GST बिलासाठी GSTIN, HSN, CGST/SGST/IGST तपशील आवश्यक आहेत. हा पर्याय अजून तयार नाही.');return}if(selectedBill){alert('हे बिल आधीच सेव्ह केले आहे. नवीन बिलासाठी New Bill दाबा.');return}let updatedStock=stock.map(p=>({...p}));for(let i of items){if(!i.productId)continue;let p=updatedStock.find(x=>x.id===i.productId);if(!p){alert(i.name+' स्टॉकमधून काढलेली आहे');return}p.qty=round(p.qty-i.qty);if(p.qty<0){alert(i.name+' पुरेसा स्टॉक नाही');return}}let b={id:'B'+Date.now()+'_'+Math.random().toString(36).slice(2,5),date:new Date().toLocaleString('en-IN'),customer:el('customer').value.trim()||'Walk-in',type:'simple',items:items.map(i=>({...i})),...calc(items)};let oldStock=localStorage.getItem(STOCK_KEY);if(!persist(STOCK_KEY,updatedStock))return;if(!persist(BILL_KEY,[b,...bills])){try{if(oldStock===null)localStorage.removeItem(STOCK_KEY);else localStorage.setItem(STOCK_KEY,oldStock)}catch(e){}alert('बिल सेव्ह झाले नाही; स्टॉक तपासा.');return}stock=updatedStock;bills=[b,...bills];selectedBill=b;selectProducts();alert('Bill Saved: '+b.id)}
+function newBill(){items=[];selectedBill=null;el('customer').value='';el('billType').value='simple';render()}
+function showHistory(){let q=el('search').value.toLowerCase();el('history').innerHTML=bills.filter(b=>String(b.id||'').toLowerCase().includes(q)||String(b.customer||'').toLowerCase().includes(q)).map(b=>`<div class="item"><b>${esc(b.id)}</b><br>${esc(b.customer)} — ${money(b.total)}<br><small>${esc(b.date)}</small><button onclick="printSaved('${esc(b.id)}')">Print / Save PDF</button></div>`).join('')||'अजून बिल नाही'}
+function receiptHTML(b){return `<h2>RAMESHSHET TRENDING COMPANY</h2><p>DONGERGAON RODE, NEAR SHRI SANT SAWATA MAHARAJ TEMPLE, DUGAON 423104<br>Mob: 8796635551</p><hr><p>Bill: ${esc(b.id)}<br>Date: ${esc(b.date)}<br>Customer: ${esc(b.customer)}</p><table><tr><th>Item</th><th>Qty</th><th>Amount</th></tr>${b.items.map(i=>`<tr><td>${esc(i.name)}</td><td>${esc(i.qty)} ${esc(i.unit)}</td><td>${money(round(i.qty*i.rate))}</td></tr>`).join('')}</table><h2>Total: ${money(b.total)}</h2><p>Thank you! धन्यवाद!</p>`}
+function printBill(b){el('receipt').innerHTML=receiptHTML(b);window.print()}
+function printSaved(id){let b=bills.find(x=>x.id===id);if(b)printBill(b)}
+function printCurrent(){if(!items.length){alert('आधी वस्तू जोडा');return}let b=selectedBill||{id:'UNSAVED',date:new Date().toLocaleString('en-IN'),customer:el('customer').value.trim()||'Walk-in',items:items.map(i=>({...i})),...calc(items)};printBill(b)}
+function exportBackup(){let payload={app:'RAMESHSHET Smart Billing',version:3,exported:new Date().toISOString(),bills,stock};let url=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}));let a=document.createElement('a');a.href=url;a.download='RAMESHSHET-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+selectProducts();render();showHistory();
+</script></body></html>
