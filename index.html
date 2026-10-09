@@ -1,0 +1,78 @@
+
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RAMESHSHET Smart Billing</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f1f5f9;margin:0;padding:15px}
+h2{text-align:center;color:#14532d}
+.card{background:white;padding:16px;border-radius:12px;margin:12px 0}
+input,select,button{padding:12px;margin:5px 0;width:100%;box-sizing:border-box;font-size:16px}
+button{background:#15803d;color:white;border:0;border-radius:8px}
+.item{padding:8px;border-bottom:1px solid #ddd}
+.total{font-size:24px;font-weight:bold}
+</style>
+</head>
+<body>
+<h2>RAMESHSHET<br>Smart Billing</h2>
+<div class="card">
+<h3>नवीन बिल / New Bill</h3>
+<input id="name" placeholder="वस्तूचे नाव / Product">
+<input id="qty" type="number" min="0.001" step="any" placeholder="प्रमाण / Quantity">
+<select id="unit">
+<option>kg</option>
+<option>gram</option>
+<option>piece</option>
+<option>packet</option>
+<option>liter</option>
+</select>
+<input id="price" type="number" min="0" step="any" placeholder="दर / Rate (₹)">
+<button onclick="addItem()">+ Add Item</button>
+</div>
+<div class="card">
+<h3>बिल / Bill</h3>
+<div id="items"></div>
+<p class="total">Total: ₹<span id="total">0.00</span></p>
+<button onclick="saveBill()">Save Bill</button>
+<button onclick="window.print()">Print Bill</button>
+<button onclick="newBill()">New Bill</button>
+</div>
+<script>
+let items=[];
+function addItem(){
+const name=document.getElementById("name").value.trim();
+const qty=Number(document.getElementById("qty").value);
+const price=Number(document.getElementById("price").value);
+const unit=document.getElementById("unit").value;
+if(!name||qty<=0||price<0||document.getElementById("price").value===""){
+alert("योग्य माहिती भरा");return;
+}
+items.push({name,qty,price,unit});
+render();
+document.getElementById("name").value="";
+document.getElementById("qty").value="";
+document.getElementById("price").value="";
+}
+function render(){
+let total=0;
+document.getElementById("items").innerHTML=items.map((x,i)=>{
+const amount=x.qty*x.price;
+total+=amount;
+return `<div class="item">${x.name} - ${x.qty} ${x.unit} × ₹${x.price} = ₹${amount.toFixed(2)} <button onclick="removeItem(${i})">Remove</button></div>`;
+}).join("");
+document.getElementById("total").textContent=total.toFixed(2);
+}
+function removeItem(i){items.splice(i,1);render();}
+function saveBill(){
+if(!items.length){alert("आधी वस्तू जोडा");return;}
+const bills=JSON.parse(localStorage.getItem("bills")||"[]");
+bills.push({date:new Date().toISOString(),items,total:document.getElementById("total").textContent});
+localStorage.setItem("bills",JSON.stringify(bills));
+alert("बिल सेव्ह झाले!");
+}
+function newBill(){items=[];render();}
+</script>
+</body>
+</html>
