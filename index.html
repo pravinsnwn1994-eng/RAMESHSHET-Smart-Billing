@@ -6,73 +6,224 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>RAMESHSHET Smart Billing</title>
 <style>
-body{font-family:Arial,sans-serif;background:#f1f5f9;margin:0;padding:15px}
-h2{text-align:center;color:#14532d}
-.card{background:white;padding:16px;border-radius:12px;margin:12px 0}
-input,select,button{padding:12px;margin:5px 0;width:100%;box-sizing:border-box;font-size:16px}
-button{background:#15803d;color:white;border:0;border-radius:8px}
-.item{padding:8px;border-bottom:1px solid #ddd}
-.total{font-size:24px;font-weight:bold}
+*{box-sizing:border-box}
+body{font-family:Arial,sans-serif;background:#f1f5f9;margin:0;padding:14px;color:#172b22}
+h1{text-align:center;color:#14532d;font-size:26px}
+h2{font-size:20px}
+.card{background:white;padding:16px;margin:15px 0;border-radius:14px}
+input,select,button{width:100%;padding:13px;margin:6px 0;font-size:16px;border-radius:8px;border:1px solid #bbb}
+button{background:#15803d;color:white;border:0;font-weight:bold}
+.secondary{background:#334155}
+.danger{background:#b91c1c}
+.item{padding:9px 0;border-bottom:1px solid #ddd}
+.total{font-size:26px;font-weight:bold;margin:16px 0}
+small{color:#64748b}
+.row{display:flex;gap:8px}
+.row>*{flex:1;min-width:0}
+#receipt{display:none}
+@media print{
+body>*:not(#receipt){display:none!important}
+#receipt{display:block!important}
+}
 </style>
 </head>
 <body>
-<h2>RAMESHSHET<br>Smart Billing</h2>
+<h1>RAMESHSHET<br>Smart Billing</h1>
+
 <div class="card">
-<h3>नवीन बिल / New Bill</h3>
-<input id="name" placeholder="वस्तूचे नाव / Product">
-<input id="qty" type="number" min="0.001" step="any" placeholder="प्रमाण / Quantity">
-<select id="unit">
-<option>kg</option>
-<option>gram</option>
-<option>piece</option>
-<option>packet</option>
-<option>liter</option>
+<h2>नवीन बिल / New Bill</h2>
+<select id="billType">
+<option value="simple">साधं बिल</option>
+<option value="gst">GST बिल</option>
 </select>
-<input id="price" type="number" min="0" step="any" placeholder="दर / Rate (₹)">
+<input id="customer" placeholder="ग्राहकाचे नाव">
+<input id="product" placeholder="वस्तूचे नाव / Product">
+<div class="row">
+<input id="qty" type="number" min="0.001" step="any" placeholder="प्रमाण">
+<select id="unit">
+<option>kg</option><option>g</option>
+<option>pcs</option><option>packet</option>
+<option>liter</option><option>ml</option>
+<option>bag</option><option>box</option>
+</select>
+</div>
+<input id="rate" type="number" min="0" step="any" placeholder="दर ₹ (प्रति निवडलेले युनिट)">
+<input id="gstRate" type="number" min="0" max="100" step="any" placeholder="GST % (उदा. 5)">
+<small>GST बिलासाठी योग्य GST दर स्वतः भरा. दर GST वगळून आहे.</small>
 <button onclick="addItem()">+ Add Item</button>
 </div>
+
 <div class="card">
-<h3>बिल / Bill</h3>
+<h2>बिल / Bill</h2>
 <div id="items"></div>
-<p class="total">Total: ₹<span id="total">0.00</span></p>
+<div class="total" id="total">Total: ₹0.00</div>
 <button onclick="saveBill()">Save Bill</button>
-<button onclick="window.print()">Print Bill</button>
-<button onclick="newBill()">New Bill</button>
+<button onclick="printCurrent()">Print Bill</button>
+<button class="secondary" onclick="newBill()">New Bill</button>
 </div>
+
+<div class="card">
+<h2>Bill History</h2>
+<input id="search" placeholder="बिल नंबर किंवा ग्राहक शोधा" oninput="showHistory()">
+<div id="history"></div>
+</div>
+
+<div id="receipt"></div>
+
 <script>
+const KEY="rameshshet_bills_v2";
 let items=[];
+let bills=[];
+let selectedBill=null;
+
+try{
+const saved=JSON.parse(localStorage.getItem(KEY)||"[]");
+if(Array.isArray(saved)) bills=saved;
+}catch(e){alert("जुना डेटा वाचता आला नाही");}
+
+const el=id=>document.getElementById(id);
+const money=n=>"₹"+Number(n).toFixed(2);
+const round=n=>Math.round((n+Number.EPSILON)*100)/100;
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({
+"&":"&amp;","<":"&lt;",">":"&gt;",
+'"':"&quot;","'":"&#39;"
+}[c]));
+
 function addItem(){
-const name=document.getElementById("name").value.trim();
-const qty=Number(document.getElementById("qty").value);
-const price=Number(document.getElementById("price").value);
-const unit=document.getElementById("unit").value;
-if(!name||qty<=0||price<0||document.getElementById("price").value===""){
-alert("योग्य माहिती भरा");return;
+const name=el("product").value.trim();
+const qty=Number(el("qty").value);
+const rate=Number(el("rate").value);
+const gst=el("billType").value==="gst"?
+Number(el("gstRate").value||0):0;
+if(!name||!Number.isFinite(qty)||qty<=0||
+!Number.isFinite(rate)||rate<0||
+!Number.isFinite(gst)||gst<0||gst>100){
+alert("वस्तू, प्रमाण, दर आणि GST तपासा");
+return;
 }
-items.push({name,qty,price,unit});
+items.push({name,qty,rate,gst,unit:el("unit").value});
+el("product").value="";
+el("qty").value="";
+el("rate").value="";
+el("gstRate").value="";
 render();
-document.getElementById("name").value="";
-document.getElementById("qty").value="";
-document.getElementById("price").value="";
 }
+
+function calc(list){
+let base=0,tax=0;
+list.forEach(i=>{
+const amount=round(i.qty*i.rate);
+base+=amount;
+tax+=round(amount*i.gst/100);
+});
+base=round(base);tax=round(tax);
+return {base,tax,total:round(base+tax)};
+}
+
 function render(){
-let total=0;
-document.getElementById("items").innerHTML=items.map((x,i)=>{
-const amount=x.qty*x.price;
-total+=amount;
-return `<div class="item">${x.name} - ${x.qty} ${x.unit} × ₹${x.price} = ₹${amount.toFixed(2)} <button onclick="removeItem(${i})">Remove</button></div>`;
-}).join("");
-document.getElementById("total").textContent=total.toFixed(2);
+el("items").innerHTML=items.map((i,n)=>
+`<div class="item">${esc(i.name)} —
+${i.qty} ${esc(i.unit)} × ${money(i.rate)}
+${i.gst?`(GST ${i.gst}%)`:""}
+<button class="danger" onclick="removeItem(${n})">Remove</button>
+</div>`).join("");
+const c=calc(items);
+el("total").textContent="Total: "+money(c.total);
 }
-function removeItem(i){items.splice(i,1);render();}
+
+function removeItem(n){
+items.splice(n,1);render();
+}
+
 function saveBill(){
 if(!items.length){alert("आधी वस्तू जोडा");return;}
-const bills=JSON.parse(localStorage.getItem("bills")||"[]");
-bills.push({date:new Date().toISOString(),items,total:document.getElementById("total").textContent});
-localStorage.setItem("bills",JSON.stringify(bills));
-alert("बिल सेव्ह झाले!");
+const type=el("billType").value;
+if(type==="gst"){
+alert("GST बिलाचा हा प्राथमिक नमुना आहे. अधिकृत GST बिलासाठी GSTIN, HSN आणि कर विभागणी आवश्यक आहे.");
+return;
 }
-function newBill(){items=[];render();}
+const bill={
+id:"B"+Date.now(),
+date:new Date().toLocaleString("en-IN"),
+customer:el("customer").value.trim()||"Walk-in",
+type,
+items:items.map(i=>({...i})),
+...calc(items)
+};
+const updated=[bill,...bills];
+try{
+localStorage.setItem(KEY,JSON.stringify(updated));
+bills=updated;
+selectedBill=bill;
+alert("Bill Saved: "+bill.id);
+showHistory();
+}catch(e){
+alert("बिल सेव्ह झाले नाही. Storage तपासा.");
+}
+}
+
+function newBill(){
+items=[];selectedBill=null;
+el("customer").value="";
+el("billType").value="simple";
+render();
+}
+
+function showHistory(){
+const q=el("search").value.toLowerCase();
+el("history").innerHTML=bills.filter(b=>
+b.id.toLowerCase().includes(q)||
+b.customer.toLowerCase().includes(q)
+).map(b=>`<div class="item">
+<b>${esc(b.id)}</b><br>
+${esc(b.customer)} — ${money(b.total)}<br>
+<small>${esc(b.date)}</small>
+<button onclick="printSaved('${b.id}')">Print / View</button>
+</div>`).join("")||"अजून बिल नाही";
+}
+
+function receiptHTML(b){
+return `<h2>RAMESHSHET TRENDING COMPANY</h2>
+<p>DONGERGAON RODE, NEAR SHRI SANT SAWATA MAHARAJ TEMPLE, DUGAON 423104<br>
+Mob: 8796635551</p>
+<hr>
+<p>Bill: ${esc(b.id)}<br>
+Date: ${esc(b.date)}<br>
+Customer: ${esc(b.customer)}</p>
+<hr>
+${b.items.map(i=>`<p>${esc(i.name)}<br>
+${i.qty} ${esc(i.unit)} × ${money(i.rate)}
+= ${money(round(i.qty*i.rate))}</p>`).join("")}
+<hr>
+<p>Subtotal: ${money(b.base)}</p>
+<p>GST: ${money(b.tax)}</p>
+<h2>Total: ${money(b.total)}</h2>
+<p>Thank you! धन्यवाद!</p>`;
+}
+
+function printBill(b){
+el("receipt").innerHTML=receiptHTML(b);
+window.print();
+}
+
+function printSaved(id){
+const b=bills.find(x=>x.id===id);
+if(b)printBill(b);
+}
+
+function printCurrent(){
+if(!items.length){alert("आधी वस्तू जोडा");return;}
+const b=selectedBill&&
+JSON.stringify(selectedBill.items)===JSON.stringify(items)
+?selectedBill:{
+id:"UNSAVED",date:new Date().toLocaleString("en-IN"),
+customer:el("customer").value||"Walk-in",
+items:items.map(i=>({...i})),...calc(items)
+};
+printBill(b);
+}
+render();
+showHistory();
 </script>
 </body>
 </html>
